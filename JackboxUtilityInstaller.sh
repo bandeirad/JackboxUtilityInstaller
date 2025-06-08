@@ -43,7 +43,7 @@ main() {
         log "Downloading unzip..."
         if wget -O "${temp_unzip}" "${UNZIP_URL}"; then
             log "Untar unzip to ${CUSTOM_BIN_DIR}"
-            tar -xf "${temp_unzip}" -c "${CUSTOM_BIN_DIR}"
+            tar -xf "${temp_unzip}" -C "${CUSTOM_BIN_DIR}/"
             chmod +x "${CUSTOM_BIN_DIR}/unzip"
         else
             log "Error: Failed to download unzip. Aborting."

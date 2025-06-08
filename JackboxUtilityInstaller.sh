@@ -7,6 +7,7 @@ set -e
 # Use variables for easy modification and readability.
 readonly USER_HOME="/home/chronos"
 readonly CUSTOM_BIN_DIR="${USER_HOME}/.local/bin" # Using .local/bin is a more common convention
+readonly APPLICATION_DESKTOP_DIR="${USER_HOME}/.local/share/applications"
 readonly UTIL_DIR="${USER_HOME}/JackboxUtility"
 readonly UNZIP_URL="https://oss.oracle.com/el4/unzip/unzip.tar"
 readonly JACKBOX_URL="https://github.com/AlexisL61/JackboxUtilityUpdater/releases/latest/download/JackboxUtility_Linux.zip"
@@ -43,7 +44,7 @@ main() {
         log "Downloading unzip..."
         if wget -O "${temp_unzip}" "${UNZIP_URL}"; then
             log "Untar unzip to ${CUSTOM_BIN_DIR}"
-            tar -xf "${temp_unzip}" -C "${CUSTOM_BIN_DIR}/"
+            tar -xf "${temp_unzip}" -c "${CUSTOM_BIN_DIR}"
             chmod +x "${CUSTOM_BIN_DIR}/unzip"
         else
             log "Error: Failed to download unzip. Aborting."
@@ -85,6 +86,19 @@ export DISPLAY=":0"
 
 # Execute the main application
 ./JackboxUtility
+EOF
+
+    # --- Create a Desktop Application File ---
+    log "Creating desktop application file..."
+    cat > "${APPLICATION_DESKTOP_DIR}/JackboxUtility.desktop" << EOF
+
+[Desktop Entry]
+Name=Jackbox Utility
+Exec=/home/chronos/JackboxUtility/start.sh
+Icon=utilities-terminal
+Type=Application
+Terminal=true
+Categories=Utility;Game;
 EOF
 
     log "Making starter script executable..."

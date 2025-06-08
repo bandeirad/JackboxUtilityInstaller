@@ -89,6 +89,9 @@ export DISPLAY=":0"
 ./JackboxUtility
 EOF
 
+    log "Making starter script executable..."
+    chmod u+x "${UTIL_DIR}/start.sh"
+
     # --- Create a Desktop Application File ---
     log "Creating desktop application file..."
     cat > "${APPLICATION_DESKTOP_DIR}/JackboxUtility.desktop" << EOF
@@ -102,8 +105,8 @@ Terminal=true
 Categories=Utility;Game;
 EOF
 
-    log "Making starter script executable..."
-    chmod u+x "${UTIL_DIR}/start.sh"
+    log "Making desktop application file executable..."
+    chmod u+x "${APPLICATION_DESKTOP_DIR}/JackboxUtility.desktop"
 
     log "Setup complete!"
     log "To run the application, execute the following command:"

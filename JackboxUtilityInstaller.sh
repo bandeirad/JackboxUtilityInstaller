@@ -1,87 +1,99 @@
 #!/bin/bash
 
-# Navigate to the user's home directory.
-# In ChromeOS, /home/chronos is the primary user's home.
-cd /home/chronos
+# Stop on any error
+set -e
 
-# --- Setup a custom unzip tool ---
-# This is necessary on some locked-down systems like ChromeOS
-# where standard package managers (apt, yum) are not available.
+# --- Configuration ---
+# Use variables for easy modification and readability.
+readonly USER_HOME="/home/chronos"
+readonly CUSTOM_BIN_DIR="${USER_HOME}/.local/bin" # Using .local/bin is a more common convention
+readonly UTIL_DIR="${USER_HOME}/JackboxUtility"
+readonly UNZIP_URL="https://github.com/stedolan/unzip/releases/download/v6.0-1/unzip" # A more modern, static binary
+readonly JACKBOX_URL="https://github.com/AlexisL61/JackboxUtilityUpdater/releases/latest/download/JackboxUtility_Linux.zip"
 
-# Create a hidden directory in the home folder to store custom binaries.
-echo "Creating a directory for custom binaries..."
-mkdir -p /home/chronos/.bin
+# --- Helper Functions ---
+# A function for logging messages.
+log() {
+    echo "--> ${1}"
+}
 
-# Download a pre-compiled 'unzip' binary as a tar archive.
-# Note: This is a very old version of unzip, but it's self-contained.
-echo "Downloading unzip tool..."
-/usr/bin/wget https://oss.oracle.com/el4/unzip/unzip.tar
+# A function to check if a command exists.
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-# Extract the 'unzip' binary from the downloaded tar file.
-echo "Extracting unzip..."
-/usr/bin/tar -xf ./unzip.tar
+# --- Main Script Logic ---
+main() {
+    log "Starting JackboxUtility Setup for ChromeOS"
 
-# Clean up by removing the downloaded tar file.
-/usr/bin/rm -f ./unzip.tar
+    # Create necessary directories
+    log "Creating directories..."
+    mkdir -p "${CUSTOM_BIN_DIR}"
+    mkdir -p "${UTIL_DIR}"
 
-# Move the extracted 'unzip' binary into the custom bin directory.
-echo "Installing unzip to /home/chronos/.bin/"
-/usr/bin/mv ./unzip /home/chronos/.bin/
+    # Navigate to the utility directory
+    cd "${UTIL_DIR}"
 
-# --- Update PATH Environment Variable ---
-# Add the custom binary directory to the shell's PATH.
-# This allows the system to find and execute 'unzip' from any directory.
-export PATH="$PATH:/home/chronos/.bin"
-echo "Updated PATH for the current session."
+    # --- Setup Unzip Tool ---
+    if ! command_exists unzip; then
+        log "Unzip not found. Setting up a custom unzip tool..."
+        # Use a temporary file for the download
+        local temp_unzip
+        temp_unzip=$(mktemp)
+        log "Downloading unzip..."
+        if wget -O "${temp_unzip}" "${UNZIP_URL}"; then
+            log "Installing unzip to ${CUSTOM_BIN_DIR}/"
+            mv "${temp_unzip}" "${CUSTOM_BIN_DIR}/unzip"
+            chmod +x "${CUSTOM_BIN_DIR}/unzip"
+        else
+            log "Error: Failed to download unzip. Aborting."
+            exit 1
+        fi
+    else
+        log "Unzip is already installed."
+    fi
 
-# --- Download and Install JackboxUtility ---
+    # Ensure the custom bin directory is in the PATH for this session
+    export PATH="${CUSTOM_BIN_DIR}:${PATH}"
 
-# Create a dedicated directory for the JackboxUtility.
-echo "Creating directory for JackboxUtility..."
-mkdir -p /home/chronos/JackboxUtility
+    # --- Download and Install JackboxUtility ---
+    log "Downloading JackboxUtility..."
+    local temp_zip
+    temp_zip=$(mktemp)
+    if wget -O "${temp_zip}" "${JACKBOX_URL}"; then
+        log "Unzipping JackboxUtility..."
+        unzip -o "${temp_zip}" -d "${UTIL_DIR}" # -o overwrites without prompting, -d specifies destination
+        rm -f "${temp_zip}"
+    else
+        log "Error: Failed to download JackboxUtility. Aborting."
+        exit 1
+    fi
 
-# Navigate into the newly created directory.
-cd /home/chronos/JackboxUtility
+    # --- Create a Starter Script ---
+    log "Creating starter script..."
+    cat > "${UTIL_DIR}/start.sh" << EOF
+#!/bin/bash
 
-# Download the latest version of JackboxUtility for Linux.
-echo "Downloading JackboxUtility..."
-/usr/bin/wget https://github.com/AlexisL61/JackboxUtilityUpdater/releases/latest/download/JackboxUtility_Linux.zip
+# Set the working directory to the location of the script
+cd "\$(dirname "\$0")"
 
-# Unzip the application files using the custom unzip tool.
-# We use the full path to be explicit.
-echo "Unzipping JackboxUtility..."
-/home/chronos/.bin/unzip ./JackboxUtility_Linux.zip
+# Add custom binaries to the PATH
+export PATH="${CUSTOM_BIN_DIR}:\${PATH}"
 
-# Clean up by removing the downloaded zip file.
-/usr/bin/rm -f ./JackboxUtility_Linux.zip
+# Set the DISPLAY variable for GUI applications
+export DISPLAY=":0"
 
-# --- Create a Starter Script for Easy Launching ---
+# Execute the main application
+./JackboxUtility
+EOF
 
-# Create a new shell script file named 'JackboxUtilityStarter.sh'.
-# The > operator creates the file and adds the first line.
-echo "Creating starter script..."
-echo '#!/bin/bash' > JackboxUtilityStarter.sh
-echo '# This script sets up the environment and runs JackboxUtility.' >> JackboxUtilityStarter.sh
+    log "Making starter script executable..."
+    chmod u+x "${UTIL_DIR}/start.sh"
 
-# Add the custom bin directory to the PATH inside the starter script.
-# This ensures 'unzip' or other tools in .bin are available when the script runs.
-# The \$PATH ensures that the PATH variable is evaluated at runtime, not at creation time.
-echo 'export PATH=$PATH:/home/chronos/.bin' >> JackboxUtilityStarter.sh
+    log "Setup complete!"
+    log "To run the application, execute the following command:"
+    log "    ${UTIL_DIR}/start.sh"
+}
 
-# Set the DISPLAY environment variable. This is crucial for GUI applications
-# to know which screen to draw on. :0 is typically the primary display.
-echo 'export DISPLAY=":0"' >> JackboxUtilityStarter.sh
-
-# Add the command to execute the main application file.
-# Note: The executable name is case-sensitive. Assuming it is 'JackboxUtility'.
-echo './JackboxUtility' >> JackboxUtilityStarter.sh
-
-# Make the starter script executable.
-# chmod 775 gives read/write/execute permissions to the user and group,
-# and read/execute permissions to others.
-echo "Making starter script executable..."
-chmod 775 ./JackboxUtilityStarter.sh
-
-echo "Setup complete!"
-echo "You can now run the application by executing:"
-echo "cd /home/chronos/JackboxUtility && ./JackboxUtilityStarter.sh"
+# Execute the main function
+main

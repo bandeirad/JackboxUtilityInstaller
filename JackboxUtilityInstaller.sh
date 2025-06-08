@@ -25,6 +25,7 @@ command_exists() {
 
 # --- Main Script Logic ---
 main() {
+    export PATH="${CUSTOM_BIN_DIR}:\${PATH}"
     log "Starting JackboxUtility Setup for ChromeOS"
 
     # Create necessary directories

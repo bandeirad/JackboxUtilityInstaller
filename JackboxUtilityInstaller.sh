@@ -8,7 +8,7 @@ set -e
 readonly USER_HOME="/home/chronos"
 readonly CUSTOM_BIN_DIR="${USER_HOME}/.local/bin" # Using .local/bin is a more common convention
 readonly UTIL_DIR="${USER_HOME}/JackboxUtility"
-readonly UNZIP_URL="https://github.com/stedolan/unzip/releases/download/v6.0-1/unzip" # A more modern, static binary
+readonly UNZIP_URL="https://oss.oracle.com/el4/unzip/unzip.tar"
 readonly JACKBOX_URL="https://github.com/AlexisL61/JackboxUtilityUpdater/releases/latest/download/JackboxUtility_Linux.zip"
 
 # --- Helper Functions ---
@@ -42,8 +42,8 @@ main() {
         temp_unzip=$(mktemp)
         log "Downloading unzip..."
         if wget -O "${temp_unzip}" "${UNZIP_URL}"; then
-            log "Installing unzip to ${CUSTOM_BIN_DIR}/"
-            mv "${temp_unzip}" "${CUSTOM_BIN_DIR}/unzip"
+            log "Untar unzip to ${CUSTOM_BIN_DIR}"
+            tar -xf "${temp_unzip}" -c "${CUSTOM_BIN_DIR}"
             chmod +x "${CUSTOM_BIN_DIR}/unzip"
         else
             log "Error: Failed to download unzip. Aborting."
